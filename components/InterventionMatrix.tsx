@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AlertCircle, CheckCircle2, FileSearch, TrendingUp } from 'lucide-react';
-import { DiagnosticCard } from './DiagnosticCard';
+import { DiagnosticCard } from './DiagnosticCard.tsx';
 
 const MOCK_DATA = [
   {

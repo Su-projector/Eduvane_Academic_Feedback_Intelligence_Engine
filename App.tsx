@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { InterventionMatrix } from './components/InterventionMatrix';
-import { ComplianceDiagram } from './components/ComplianceDiagram';
-import { AcademicEngineCode } from './components/AcademicEngineCode';
-import { VaneIcon } from './constants';
+import { InterventionMatrix } from './components/InterventionMatrix.tsx';
+import { ComplianceDiagram } from './components/ComplianceDiagram.tsx';
+import { AcademicEngineCode } from './components/AcademicEngineCode.tsx';
+import { VaneIcon } from './constants.tsx';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'compliance' | 'backend'>('dashboard');
@@ -15,7 +15,7 @@ const App: React.FC = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <VaneIcon color="#1FA2A6" size={32} />
-            <h1 className="text-xl font-bold tracking-tight">EDUVANE <span className="font-light text-slate-300">| Intelligence Engine</span></h1>
+            <h1 className="text-xl font-bold tracking-tight text-white">EDUVANE <span className="font-light text-slate-300">| Intelligence Engine</span></h1>
           </div>
           <nav className="flex gap-6 text-sm font-semibold" role="tablist" aria-label="Module Navigation">
             <button 
