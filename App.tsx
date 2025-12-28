@@ -8,7 +8,7 @@ import { HistoryView } from './components/standalone/HistoryView.tsx';
 import { VaneIcon } from './constants.tsx';
 import { Submission, PracticeSet, UserProfile } from './types.ts';
 import { SupabaseService, supabase } from './services/SupabaseService.ts';
-import { LogOut, User as UserIcon, Loader2, Info } from 'lucide-react';
+import { LogOut, User as UserIcon, Loader2, Info, LayoutDashboard, Camera, Sparkles, History } from 'lucide-react';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -38,7 +38,6 @@ const App: React.FC = () => {
         });
         return () => subscription.unsubscribe();
       } else {
-        // No Supabase config, stay in guest potential mode
         setLoading(false);
       }
     };
@@ -74,6 +73,24 @@ const App: React.FC = () => {
       SupabaseService.auth.signIn();
     } else {
       handleGuestStart(initialView);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    try {
+      if (SupabaseService.isConfigured() && session) {
+        await SupabaseService.auth.signOut();
+      }
+      setIsGuest(false);
+      setSession(null);
+      setProfile(null);
+      setView('DASHBOARD');
+      setRouteParams({});
+    } catch (e) {
+      console.error("Sign out error:", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,33 +131,42 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
       {(!SupabaseService.isConfigured() || isGuest) && (
-        <div className="bg-[#F2A900] text-[#1E3A5F] px-4 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-          <Info size={14} /> Guest Mode: Data is saved locally in this browser only.
+        <div className="bg-[#F2A900] text-[#1E3A5F] px-4 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 z-[60]">
+          <Info size={14} /> Guest Mode: Local Persistence Active
         </div>
       )}
       
-      <header className="bg-[#1E3A5F] text-white p-4 shadow-lg sticky top-0 z-50">
+      {/* Top Header: Identity & Profile */}
+      <header className="bg-[#1E3A5F] text-white p-4 md:p-6 shadow-lg sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setView('DASHBOARD'); setRouteParams({}); }}>
-            <VaneIcon color="#1FA2A6" size={32} />
-            <h1 className="text-xl font-bold tracking-tight">EDUVANE</h1>
+          <div className="flex items-center gap-2 md:gap-3 cursor-pointer group" onClick={() => { setView('DASHBOARD'); setRouteParams({}); }}>
+            <VaneIcon color="#1FA2A6" size={28} className="md:w-8 md:h-8 transition-transform group-hover:rotate-12" />
+            <h1 className="text-lg md:text-xl font-black tracking-tighter uppercase">EDUVANE</h1>
           </div>
-          <nav className="flex items-center gap-6">
-            <button onClick={() => setView('UPLOAD')} className={`text-xs font-bold uppercase tracking-widest ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Evaluate</button>
-            <button onClick={() => setView('PRACTICE')} className={`text-xs font-bold uppercase tracking-widest ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Practice</button>
-            <button onClick={() => setView('HISTORY')} className={`text-xs font-bold uppercase tracking-widest ${view === 'HISTORY' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Progress</button>
-            <div className="h-6 w-px bg-slate-700"></div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black bg-[#1FA2A6] px-2 py-0.5 rounded text-white">{profile?.xp_total || 0} XP</span>
-              <button onClick={() => SupabaseService.auth.signOut()} className="text-slate-400 hover:text-red-400 transition-colors">
-                <LogOut size={16} />
-              </button>
-            </div>
+          
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8">
+            <button onClick={() => setView('UPLOAD')} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Evaluate</button>
+            <button onClick={() => setView('PRACTICE')} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Practice</button>
+            <button onClick={() => setView('HISTORY')} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${view === 'HISTORY' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Progress</button>
           </nav>
+
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-[9px] md:text-[10px] font-black bg-[#1FA2A6] px-2 md:px-3 py-0.5 md:py-1 rounded-full text-white shadow-sm">
+                {profile?.xp_total || 0} XP
+              </span>
+            </div>
+            <div className="h-6 w-px bg-slate-700 hidden md:block"></div>
+            <button onClick={handleSignOut} className="text-slate-400 hover:text-red-400 transition-colors p-1" aria-label="Sign Out">
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-grow container mx-auto py-8 px-4">
+      {/* Main Content Area */}
+      <main className="flex-grow container mx-auto py-6 md:py-10 px-4 mb-20 md:mb-0">
         {view === 'DASHBOARD' && (
           <Dashboard 
             onAction={setView} 
@@ -174,8 +200,40 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="p-6 text-center text-[10px] text-slate-400 font-mono tracking-widest uppercase border-t border-slate-200 bg-white">
-        Standalone MVP | Persistent Learning Loop
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+        <button 
+          onClick={() => setView('DASHBOARD')} 
+          className={`flex flex-col items-center gap-1 ${view === 'DASHBOARD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
+        >
+          <LayoutDashboard size={20} />
+          <span className="text-[8px] font-black uppercase tracking-widest">Hub</span>
+        </button>
+        <button 
+          onClick={() => setView('UPLOAD')} 
+          className={`flex flex-col items-center gap-1 ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
+        >
+          <Camera size={20} />
+          <span className="text-[8px] font-black uppercase tracking-widest">Evaluate</span>
+        </button>
+        <button 
+          onClick={() => setView('PRACTICE')} 
+          className={`flex flex-col items-center gap-1 ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
+        >
+          <Sparkles size={20} />
+          <span className="text-[8px] font-black uppercase tracking-widest">Practice</span>
+        </button>
+        <button 
+          onClick={() => setView('HISTORY')} 
+          className={`flex flex-col items-center gap-1 ${view === 'HISTORY' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
+        >
+          <History size={20} />
+          <span className="text-[8px] font-black uppercase tracking-widest">Timeline</span>
+        </button>
+      </nav>
+
+      <footer className="hidden md:block p-8 text-center text-[10px] text-slate-400 font-mono tracking-[0.4em] uppercase border-t border-slate-100 bg-white">
+        Intelligence Engine MVP | Standalone Framework v1
       </footer>
     </div>
   );
