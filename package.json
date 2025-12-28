@@ -1,5 +1,5 @@
 {
-  "name": "eduvane---intelligence-first-architecture",
+  "name": "eduvane---learning-intelligence-mvp",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,8 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "lucide-react": "0.344.0",
-    "@google/genai": "latest"
+    "@google/genai": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

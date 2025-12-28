@@ -3,7 +3,12 @@ import React from 'react';
 import { VaneIcon } from '../../constants.tsx';
 import { Upload, Sparkles, ArrowRight } from 'lucide-react';
 
-export const LandingPage: React.FC<{ onStart: () => void }> = ({ onStart }) => {
+interface LandingPageProps {
+  onStart: (intent: 'DASHBOARD' | 'UPLOAD' | 'PRACTICE') => void;
+  onGuest: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onGuest }) => {
   return (
     <div className="min-h-screen bg-[#1E3A5F] flex flex-col items-center justify-center p-6 text-white text-center">
       <div className="mb-8 animate-bounce">
@@ -16,7 +21,7 @@ export const LandingPage: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
         <button 
-          onClick={onStart}
+          onClick={() => onStart('UPLOAD')}
           className="group bg-white text-[#1E3A5F] p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 transition-all hover:scale-105"
         >
           <div className="bg-[#1FA2A6]/10 p-4 rounded-full text-[#1FA2A6]">
@@ -30,7 +35,7 @@ export const LandingPage: React.FC<{ onStart: () => void }> = ({ onStart }) => {
         </button>
 
         <button 
-          onClick={onStart}
+          onClick={() => onStart('PRACTICE')}
           className="group bg-[#1FA2A6] text-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 transition-all hover:scale-105"
         >
           <div className="bg-white/10 p-4 rounded-full text-white">
@@ -45,7 +50,7 @@ export const LandingPage: React.FC<{ onStart: () => void }> = ({ onStart }) => {
       </div>
 
       <button 
-        onClick={onStart}
+        onClick={onGuest}
         className="mt-12 text-slate-400 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest"
       >
         Continue as Guest

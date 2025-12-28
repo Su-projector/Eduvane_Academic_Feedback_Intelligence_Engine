@@ -1,5 +1,7 @@
 {
-  "name": "Eduvane - Intelligence-First Architecture",
-  "description": "[EDUVANE | SEC III.C COMPLIANT] Restructured intelligence system. Architecture enforces separation between Signal Ingestion, Intelligence Core, Validation Gates, and Role-Specific Delivery Adapters.",
-  "requestFramePermissions": []
+  "name": "Eduvane - Learning Intelligence MVP",
+  "description": "Subject-agnostic learning intelligence platform with conversational intent routing and persistent progress tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
 }
