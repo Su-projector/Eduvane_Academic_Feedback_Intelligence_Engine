@@ -77,7 +77,7 @@ export const DiagnosticCard: React.FC<DiagnosticCardProps> = ({ data }) => {
             <Zap size={12} className="text-[#1FA2A6]" />
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#1E3A5F]">Conceptual Diagnosis</span>
           </div>
-          <p className="text-sm insight-narrative text-[#2B2E34] leading-relaxed">
+          <p className="text-sm insight-narrative text-[#1E3A5F] leading-relaxed">
             "{data.insight}"
           </p>
         </div>
@@ -87,7 +87,7 @@ export const DiagnosticCard: React.FC<DiagnosticCardProps> = ({ data }) => {
             <ShieldCheck size={12} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Handwriting Clarity</span>
           </div>
-          <p className="text-[13px] text-slate-600 italic">
+          <p className="text-[13px] text-slate-700 italic font-medium">
             {data.clarityNote}
           </p>
         </div>
@@ -143,8 +143,8 @@ export const DiagnosticCard: React.FC<DiagnosticCardProps> = ({ data }) => {
                 <textarea 
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="Tell us more about your thought process... (e.g. 'I didn't notice the negative sign' or 'I need more help with long division')"
-                  className="w-full h-24 p-3 text-sm border border-slate-200 rounded-md outline-none focus:ring-2 focus:ring-[#1FA2A6]/20 focus:border-[#1FA2A6] bg-white resize-none shadow-sm placeholder:text-slate-300 transition-all"
+                  placeholder="Tell us more about your thought process..."
+                  className="w-full h-24 p-3 text-sm text-[#1E3A5F] border border-slate-200 rounded-md outline-none focus:ring-2 focus:ring-[#1FA2A6]/20 focus:border-[#1FA2A6] bg-white resize-none shadow-sm placeholder:text-slate-300 transition-all"
                   required
                   disabled={isSubmitting}
                 />

@@ -3,18 +3,15 @@ import { IntelligenceInsight } from '../types.ts';
 
 /**
  * INTELLIGENCE CORE DOMAIN
- * Responsibility: Processing anonymized signals into structured Insight objects.
+ * Responsibility: Processing signals into structured subject-agnostic insights.
  */
 export const IntelligenceCore = {
   /**
    * Generates confidence-aware intelligence from processed artifacts.
-   * Logic follows Sec III.B.1 (Confidence-Aware Diagnosis).
    */
   generateInsight: (data: any): IntelligenceInsight => {
     const confidence = calculateConfidence(data);
     
-    // Fix: Aligned properties with IntelligenceInsight interface and corrected 'EDUCATOR_REVIEW' to 'PENDING_REVIEW'
-    // Added observationalStatement to fix rendering in ValidationGate component.
     return {
       id: `INS-${Math.random().toString(36).substr(2, 9)}`,
       studentId: data.studentId || 'ANON',
@@ -33,12 +30,15 @@ export const IntelligenceCore = {
 };
 
 const calculateConfidence = (data: any): number => {
-  // Complex heuristic simulation based on pattern matching reliability
   return data.confidence || 0.85;
 };
 
 const determineCategory = (data: any): 'CONCEPTUAL' | 'PROCEDURAL' | 'CARELESS' => {
-  if (data.errorPattern === 'logic') return 'CONCEPTUAL';
-  if (data.errorPattern === 'arithmetic') return 'PROCEDURAL';
+  // Broadened definitions:
+  // CONCEPTUAL: Misunderstanding of core subject principles.
+  // PROCEDURAL: Error in execution flow, structural logic, or grammar.
+  // CARELESS: Transient slip despite underlying mastery.
+  if (data.errorPattern === 'logic' || data.errorPattern === 'argument') return 'CONCEPTUAL';
+  if (data.errorPattern === 'arithmetic' || data.errorPattern === 'syntax' || data.errorPattern === 'structure') return 'PROCEDURAL';
   return 'CARELESS';
 };

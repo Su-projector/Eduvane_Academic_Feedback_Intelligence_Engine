@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { AIOrchestrator } from '../../services/AIOrchestrator.ts';
 import { Submission } from '../../types.ts';
-import { Upload, Loader2, CheckCircle, ArrowLeft, Lightbulb } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, ArrowLeft, Lightbulb, BookOpen } from 'lucide-react';
 
 interface UploadFlowProps {
   onComplete: (sub: Submission) => void;
@@ -11,16 +11,15 @@ interface UploadFlowProps {
 
 export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) => {
   const [state, setState] = useState<'IDLE' | 'PROCESSING' | 'RESULT'>('IDLE');
-  const [subject, setSubject] = useState('Math');
+  const [subject, setSubject] = useState('');
   const [result, setResult] = useState<Submission | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !subject) return;
 
     setState('PROCESSING');
     
-    // Convert to base64 for Gemini
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = (reader.result as string).split(',')[1];
@@ -49,8 +48,8 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
       <div className="flex flex-col items-center justify-center py-20 space-y-6">
         <Loader2 className="animate-spin text-[#1FA2A6]" size={64} />
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-[#1E3A5F]">Analyzing Your Work...</h3>
-          <p className="text-slate-400 animate-pulse mt-2">Reading handwriting, understanding concepts, and finding gems.</p>
+          <h3 className="text-2xl font-bold text-[#1E3A5F]">Generating Intelligence...</h3>
+          <p className="text-slate-500 animate-pulse mt-2">Analyzing {subject} work for conceptual patterns.</p>
         </div>
       </div>
     );
@@ -64,7 +63,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
             <ArrowLeft size={16} /> Dashboard
           </button>
           <span className="bg-[#1FA2A6]/10 text-[#1FA2A6] px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-            Intelligence Captured
+            {result.subject} Analysis Complete
           </span>
         </div>
 
@@ -77,13 +76,13 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-black text-[#1E3A5F]">{result.score}%</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase">Score</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Evaluation</span>
               </div>
             </div>
             
             <div className="flex-grow space-y-4">
-              <h2 className="text-3xl font-bold text-[#1E3A5F]">Here's how you did!</h2>
-              <p className="text-lg text-slate-600 leading-relaxed font-medium insight-narrative">
+              <h2 className="text-3xl font-bold text-[#1E3A5F]">Work Evaluation</h2>
+              <p className="text-lg text-slate-800 leading-relaxed font-medium insight-narrative">
                 "{result.feedback}"
               </p>
             </div>
@@ -98,7 +97,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
             </div>
             <ul className="space-y-3">
               {result.improvementSteps.map((step, i) => (
-                <li key={i} className="flex gap-3 text-sm text-slate-600">
+                <li key={i} className="flex gap-3 text-sm text-slate-700">
                   <span className="font-black text-[#1FA2A6]">{i + 1}.</span>
                   {step}
                 </li>
@@ -109,9 +108,9 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
           <div className="bg-[#1E3A5F] p-8 rounded-2xl text-white flex flex-col justify-center items-center text-center">
             <CheckCircle size={48} className="text-[#1FA2A6] mb-4" />
             <h4 className="text-xl font-bold mb-2">Saved to History</h4>
-            <p className="text-slate-400 text-xs mb-6">Your progress has been updated.</p>
+            <p className="text-slate-400 text-xs mb-6">Your {result.subject} progress has been updated.</p>
             <button onClick={() => setState('IDLE')} className="w-full py-3 bg-[#1FA2A6] rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-[#198d91] transition-all">
-              Analyze Another
+              Evaluate Another
             </button>
           </div>
         </div>
@@ -122,31 +121,36 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ onComplete, onBack }) =>
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[#1E3A5F]">Analyze Your Work</h2>
-        <p className="text-slate-500 mt-2">Get instant scores and encouraging feedback from your handwritten answers.</p>
+        <h2 className="text-3xl font-bold text-[#1E3A5F]">Work Evaluation</h2>
+        <p className="text-slate-500 mt-2">Instant subject-aware feedback for any academic task.</p>
       </div>
 
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={() => setSubject('Math')} 
-            className={`py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all ${subject === 'Math' ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]' : 'text-slate-400 border-slate-100 hover:border-slate-300'}`}
-          >Math</button>
-          <button 
-            onClick={() => setSubject('Science')} 
-            className={`py-3 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all ${subject === 'Science' ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]' : 'text-slate-400 border-slate-100 hover:border-slate-300'}`}
-          >Science</button>
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Subject Area</label>
+          <div className="relative">
+            <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+            <input 
+              type="text" 
+              placeholder="e.g. History, English Literature, Calculus..." 
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full p-4 pl-12 bg-slate-50 border border-slate-100 rounded-xl text-sm text-[#1E3A5F] focus:outline-none focus:ring-2 focus:ring-[#1FA2A6]/20 transition-all"
+            />
+          </div>
         </div>
 
-        <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-slate-50 transition-all group">
+        <label className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-3xl transition-all group ${!subject ? 'opacity-50 cursor-not-allowed border-slate-100' : 'cursor-pointer border-slate-200 hover:bg-slate-50'}`}>
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <div className="p-4 bg-slate-100 rounded-full text-slate-400 group-hover:text-[#1FA2A6] group-hover:bg-[#1FA2A6]/10 transition-all mb-4">
+            <div className={`p-4 rounded-full mb-4 transition-all ${!subject ? 'bg-slate-50 text-slate-200' : 'bg-slate-100 text-slate-400 group-hover:text-[#1FA2A6] group-hover:bg-[#1FA2A6]/10'}`}>
               <Upload size={32} />
             </div>
-            <p className="mb-2 text-sm text-slate-500 font-bold uppercase tracking-widest">Click to upload photo or PDF</p>
-            <p className="text-xs text-slate-400">Handwritten work works best!</p>
+            <p className="mb-2 text-sm text-slate-500 font-bold uppercase tracking-widest">
+              {!subject ? 'Enter subject above first' : 'Click to upload your work'}
+            </p>
+            <p className="text-xs text-slate-400 font-medium">Supports essays, diagrams, or calculations.</p>
           </div>
-          <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileUpload} />
+          <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={!subject} />
         </label>
       </div>
     </div>
