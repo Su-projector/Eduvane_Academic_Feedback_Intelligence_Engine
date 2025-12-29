@@ -1,53 +1,88 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentParameters } from "@google/genai";
 import { Question, Submission, IntentResult } from "../types.ts";
 
 /**
- * EDUVANE AI ORCHESTRATOR (MANDATORY SPEC V1)
- * 1. Perception Layer (OCR - Tesseract Proxy)
- * 2. Interpretation Layer (Classification - Qwen Proxy)
- * 3. Primary Reasoning Layer (Voice/Scoring - LLaMA 3 Proxy)
+ * ARCHITECTURAL PROVIDER INTERFACE
+ * Decouples model identity from architectural role.
  */
-export const AIOrchestrator = {
-  /**
-   * LAYER 1: PERCEPTION (Simulates Tesseract OCR)
-   * Task: Extract raw text only. No reasoning.
-   */
-  async perceptionLayer(imageBuffer: string): Promise<string> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+interface AIProvider {
+  generate(params: GenerateContentParameters): Promise<any>;
+}
+
+/**
+ * GEMINI PROVIDER ADAPTER
+ * Uses process.env.API_KEY exclusively and initializes GoogleGenAI instance right before making calls.
+ */
+class GeminiProvider implements AIProvider {
+  private modelName: string;
+
+  constructor(model: string) {
+    this.modelName = model;
+  }
+
+  async generate(params: any) {
+    // Correctly obtain API key exclusively from process.env.API_KEY
+    const apiKey = process.env.API_KEY;
+    // Create new instance before each call to ensure up-to-date configuration
+    const ai = new GoogleGenAI({ apiKey });
+    return await ai.models.generateContent({
+      model: this.modelName,
+      ...params
+    });
+  }
+}
+
+/**
+ * ROLE 1: PERCEPTION SERVICE
+ * Responsibility: Mechanical text extraction only. No inference.
+ */
+class PerceptionService {
+  private provider: AIProvider;
+  constructor() {
+    this.provider = new GeminiProvider("gemini-3-flash-preview");
+  }
+
+  async extractVerbatim(imageBuffer: string): Promise<string> {
+    const response = await this.provider.generate({
       contents: {
         parts: [
           { inlineData: { data: imageBuffer, mimeType: "image/jpeg" } },
-          { text: "PERCEPTION LAYER TASK: Extract all text from this image exactly as it appears. Do not interpret, do not correct, do not evaluate. Return raw text markdown." }
+          { text: "PERCEPTION TASK: VERBATIM EXTRACTION. Extract all text exactly. No correction. No interpretation. No grading. Return raw text markdown." }
         ]
       }
     });
+    // Access .text property directly as it returns string | undefined
     return response.text || "";
-  },
+  }
+}
 
-  /**
-   * LAYER 2: INTERPRETATION (Simulates Qwen)
-   * Task: Clean text, detect intent/subject, provide structured machine context.
-   */
-  async interpretationLayer(input: string): Promise<IntentResult> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * ROLE 2: INTERPRETATION SERVICE
+ * Responsibility: Subject detection, Intent parsing, OCR Cleanup.
+ */
+class InterpretationService {
+  private provider: AIProvider;
+  constructor() {
+    this.provider = new GeminiProvider("gemini-3-flash-preview");
+  }
+
+  async parseIntent(input: string): Promise<IntentResult> {
     const prompt = `
-      INTERPRETATION LAYER TASK: Analyze the following signal for intent routing.
-      Signal: "${input}"
+      INTERPRETATION TASK: Analyze input for structured context.
+      INPUT: "${input}"
       
-      Determine:
-      1. Intent: "ANALYZE" (evaluation), "PRACTICE" (generation), "HISTORY" (status), "CHAT" (generic).
-      2. Subject: The academic discipline (Math, History, etc.).
-      3. Topic: Specific core concept.
-      4. Metadata: Count (if items requested), Difficulty (Easy/Medium/Hard).
-      
-      Output valid JSON only.
+      OUTPUT JSON SCHEMA:
+      {
+        "intent": "ANALYZE" | "PRACTICE" | "HISTORY" | "CHAT",
+        "subject": "Detected Academic Subject",
+        "topic": "Specific Concept",
+        "difficulty": "Easy" | "Medium" | "Hard",
+        "count": number
+      }
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const response = await this.provider.generate({
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -57,63 +92,48 @@ export const AIOrchestrator = {
             intent: { type: Type.STRING },
             subject: { type: Type.STRING },
             topic: { type: Type.STRING },
-            count: { type: Type.NUMBER },
-            difficulty: { type: Type.STRING }
+            difficulty: { type: Type.STRING },
+            count: { type: Type.NUMBER }
           },
           required: ["intent", "subject"]
         }
       }
     });
 
-    try {
-      const data = JSON.parse(response.text || "{}");
-      return {
-        intent: (data.intent as any) || "CHAT",
-        subject: data.subject || "General Study",
-        topic: data.topic || "Unknown",
-        count: data.count || 5,
-        difficulty: (data.difficulty as any) || "Medium"
-      };
-    } catch (e) {
-      return { intent: "CHAT", subject: "General", topic: "Unknown" };
-    }
-  },
+    // Access .text property directly
+    return JSON.parse(response.text || "{}");
+  }
+}
 
-  /**
-   * LAYER 3: PRIMARY REASONING (Simulates LLaMA 3 8B)
-   * Task: This is the ONLY layer allowed to produce user-facing responses.
-   * Voice: Encouraging, non-authoritative, conversational.
-   */
-  async evaluateWorkFlow(imageBuffer: string): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
-    // 1. OCR Extraction (Internal)
-    const rawText = await this.perceptionLayer(imageBuffer);
-    
-    // 2. Intent/Subject Detection (Internal)
-    const context = await this.interpretationLayer(rawText);
-    
-    // 3. Primary Reasoning (User-Facing Voice)
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const reasoningPrompt = `
-      ROLE: Eduvane Primary Reasoning Engine.
-      CONTEXT: Subject: ${context.subject}, Topic: ${context.topic}.
+/**
+ * ROLE 3: PRIMARY REASONING SERVICE
+ * Responsibility: Single Voice output. Scoring, Feedback, Question Generation.
+ */
+class PrimaryReasoningService {
+  private provider: AIProvider;
+  constructor() {
+    this.provider = new GeminiProvider("gemini-3-pro-preview");
+  }
+
+  async evaluate(rawText: string, context: IntentResult): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
+    const prompt = `
+      ROLE: EDUVANE PRIMARY REASONING VOICE.
+      SUBJECT: ${context.subject}. TOPIC: ${context.topic}.
       DATA: ${rawText}
       
-      TASK:
-      1. Score the work (0-100).
-      2. Provide conversational, encouraging pedagogical feedback.
+      TASK: 
+      1. Produce a Mastery Score (0-100).
+      2. Provide encouraging, conversational pedagogical feedback.
       3. List 3 specific actionable improvement steps.
       
-      VOICE RULES:
-      - Encouraging and supportive.
-      - Not an "AI replacement" but a helper.
-      - Score MUST appear before the narrative feedback.
-      
-      Output JSON only.
+      CONSTRAINTS:
+      - Score MUST appear first.
+      - Tone: Encouraging and non-authoritative.
+      - Single Voice: Do not mention internal layers.
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: reasoningPrompt,
+    const response = await this.provider.generate({
+      contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 8000 },
         responseMimeType: "application/json",
@@ -130,42 +150,31 @@ export const AIOrchestrator = {
       }
     });
 
-    const result = JSON.parse(response.text || "{}");
+    // Access .text property directly
+    const data = JSON.parse(response.text || "{}");
     return {
       subject: context.subject,
-      topic: context.topic,
-      score: result.score,
-      feedback: result.feedback,
-      improvementSteps: result.improvementSteps,
-      confidenceScore: result.confidenceScore || 0.9
+      topic: context.topic || "Academic Work",
+      score: data.score,
+      feedback: data.feedback,
+      improvementSteps: data.improvementSteps,
+      confidenceScore: data.confidenceScore || 0.9
     };
-  },
+  }
 
-  /**
-   * ORCHESTRATION FLOW B: Question Generation
-   */
-  async generatePracticeFlow(prompt: string): Promise<Question[]> {
-    // 1. Interpretation
-    const context = await this.interpretationLayer(prompt);
-    
-    // 2. Primary Reasoning
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const genPrompt = `
-      ROLE: Eduvane Primary Content Engine.
-      REQUEST: Create ${context.count} ${context.difficulty} practice items for ${context.subject} (${context.topic}).
+  async generateQuestions(context: IntentResult): Promise<Question[]> {
+    const prompt = `
+      ROLE: EDUVANE PRIMARY REASONING VOICE.
+      TASK: Generate ${context.count || 5} ${context.difficulty || 'Medium'} questions for ${context.subject}: ${context.topic}.
       
-      FORMAT RULES:
-      - Output as plain text questions.
-      - Ordered 1, 2, 3...
-      - No UI controls, no editable markers.
+      FORMAT:
+      - Plain text. Ordered.
+      - No editable UI markers.
       - High academic rigor.
-      
-      Output JSON array of {id, text, type}.
     `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: genPrompt,
+    const response = await this.provider.generate({
+      contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 4000 },
         responseMimeType: "application/json",
@@ -184,6 +193,45 @@ export const AIOrchestrator = {
       }
     });
 
+    // Access .text property directly
     return JSON.parse(response.text || "[]");
+  }
+}
+
+/**
+ * EXPLICIT AI ORCHESTRATOR
+ * Coordinates role-based services in sequential order.
+ */
+export const AIOrchestrator = {
+  perception: new PerceptionService(),
+  interpretation: new InterpretationService(),
+  reasoning: new PrimaryReasoningService(),
+
+  async validateConfiguration() {
+    // Validate exclusively against process.env.API_KEY as per core requirement
+    if (!process.env.API_KEY) {
+      console.error("AI Orchestrator Initialization Failure: Missing API_KEY");
+      return false;
+    }
+    return true;
+  },
+
+  /**
+   * FLOW A: UPLOAD EVALUATION
+   * Perception -> Interpretation -> Primary Reasoning
+   */
+  async evaluateWorkFlow(imageBuffer: string): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
+    const rawText = await this.perception.extractVerbatim(imageBuffer);
+    const context = await this.interpretation.parseIntent(rawText);
+    return await this.reasoning.evaluate(rawText, context);
+  },
+
+  /**
+   * FLOW B: QUESTION GENERATION
+   * Prompt -> Interpretation -> Primary Reasoning
+   */
+  async generatePracticeFlow(prompt: string): Promise<Question[]> {
+    const context = await this.interpretation.parseIntent(prompt);
+    return await this.reasoning.generateQuestions(context);
   }
 };

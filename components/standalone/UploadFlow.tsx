@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { AIOrchestrator } from '../../services/AIOrchestrator.ts';
 import { SupabaseService } from '../../services/SupabaseService.ts';
 import { Submission } from '../../types.ts';
-import { Loader2, CheckCircle, ArrowLeft, Lightbulb, Camera, Info } from 'lucide-react';
+import { Loader2, CheckCircle, ArrowLeft, Lightbulb, Camera } from 'lucide-react';
 import { VaneIcon } from '../../constants.tsx';
 
 interface UploadFlowProps {
@@ -31,8 +31,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
         setProgressMsg('Uploading to vault...');
         const publicUrl = await SupabaseService.storage.upload(userId, base64);
         
-        setProgressMsg('Triggering AI Orchestrator Pipeline...');
-        // TRIGGER SEQUENTIAL ORCHESTRATION: Perception -> Interpretation -> Primary Reasoning
+        setProgressMsg('Running Orchestration Pipeline...');
         const analysis = await AIOrchestrator.evaluateWorkFlow(base64);
         
         const submission: Submission = {
@@ -48,9 +47,9 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
         onComplete(submission);
         setState('RESULT');
       } catch (err) {
-        console.error("Orchestration Pipeline Failure:", err);
+        console.error("Orchestration Error:", err);
         setState('IDLE');
-        alert("Intelligence Core encountered an error. Check image clarity.");
+        alert("Evaluation failed. Please check image clarity and connectivity.");
       }
     };
     reader.readAsDataURL(file);
@@ -66,7 +65,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
           </div>
         </div>
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-[#1E3A5F]">Orchestration in Progress</h3>
+          <h3 className="text-2xl font-bold text-[#1E3A5F]">Deep Diagnostic In Progress</h3>
           <p className="text-slate-500 animate-pulse mt-2 font-mono text-xs uppercase tracking-widest">{progressMsg}</p>
         </div>
       </div>
@@ -82,7 +81,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
           </button>
           <div className="text-right">
             <span className="bg-[#1FA2A6]/10 text-[#1FA2A6] px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-              {result.subject} • {result.topic}
+              {result.subject} {result.topic ? `• ${result.topic}` : ''}
             </span>
           </div>
         </div>
@@ -90,13 +89,13 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
         <div className="bg-white rounded-3xl p-8 md:p-12 shadow-2xl border-b-8 border-[#1FA2A6]">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="text-center">
-              <div className="text-7xl font-black text-[#1FA2A6] leading-none">{result.score}</div>
-              <div className="text-[10px] font-black text-[#1E3A5F] uppercase tracking-[0.3em] mt-2">Mastery Index</div>
+              <div className="text-6xl font-black text-[#1FA2A6] leading-none">{result.score}%</div>
+              <div className="text-[10px] font-bold text-[#1E3A5F] uppercase tracking-widest mt-2">Mastery Index</div>
             </div>
             
             <div className="flex-grow space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-[#1FA2A6] tracking-widest">Voice of Eduvane</span>
+                <span className="text-[10px] font-black uppercase text-[#1FA2A6] tracking-widest">Primary Voice Diagnostic</span>
               </div>
               <p className="text-lg text-slate-800 leading-relaxed font-medium insight-narrative">
                 {result.feedback}
@@ -109,7 +108,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
             <div className="flex items-center gap-2 mb-6 text-[#1FA2A6]">
               <Lightbulb size={20} />
-              <h4 className="font-bold text-[#1E3A5F] uppercase text-xs tracking-widest">Next Growth Actions</h4>
+              <h4 className="font-bold text-[#1E3A5F] uppercase text-xs tracking-widest">Growth Steps</h4>
             </div>
             <ul className="space-y-4">
               {result.improvementSteps.map((step, i) => (
@@ -121,14 +120,11 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
             </ul>
           </div>
           
-          <div className="bg-[#1E3A5F] p-10 rounded-2xl text-white flex flex-col justify-center items-center text-center shadow-xl">
+          <button onClick={() => setState('IDLE')} className="bg-[#1E3A5F] p-10 rounded-2xl text-white flex flex-col justify-center items-center text-center shadow-xl hover:scale-[1.02] transition-transform">
             <CheckCircle size={40} className="text-[#1FA2A6] mb-4" />
-            <h4 className="text-xl font-bold mb-2">Diagnostic Indexed</h4>
-            <p className="text-slate-400 text-xs mb-8">This analysis signal is now part of your academic growth timeline.</p>
-            <button onClick={() => setState('IDLE')} className="w-full py-4 bg-[#1FA2A6] rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-[#198d91] transition-all">
-              Evaluate Another Work
-            </button>
-          </div>
+            <h4 className="text-xl font-bold mb-2">Diagnostic Complete</h4>
+            <p className="text-slate-400 text-xs">Evaluate new work signal</p>
+          </button>
         </div>
       </div>
     );
@@ -138,7 +134,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500 py-6">
       <div className="text-center">
         <h2 className="text-4xl font-black text-[#1E3A5F] tracking-tight">Immediate Evaluation</h2>
-        <p className="text-slate-500 mt-2 font-medium">No context required. Upload work for agnostic diagnostic analysis.</p>
+        <p className="text-slate-500 mt-2 font-medium">Agnostic diagnostic core. No pre-context required.</p>
       </div>
 
       <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200">
@@ -148,11 +144,11 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
               <Camera size={64} strokeWidth={1.5} />
             </div>
             <p className="mb-2 text-2xl text-[#1E3A5F] font-black uppercase tracking-tight text-center">
-              Snap or Upload Signal
+              Snap Work Signal
             </p>
             <p className="text-sm text-slate-400 text-center font-medium leading-relaxed max-w-xs">
               Handwritten notes, essays, or problems.<br />
-              Intelligence inferred immediately.
+              Eduvane infers subject automatically.
             </p>
           </div>
           <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />

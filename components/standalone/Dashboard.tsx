@@ -20,8 +20,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onAction, onCommand, submi
     if (!command.trim()) return;
     setIsRouting(true);
     try {
-      // TRIGGER INTERPRETATION LAYER - Corrected from 'interpret' to 'interpretationLayer' to match the service interface
-      const result = await AIOrchestrator.interpretationLayer(command);
+      // Fix: Property 'interpretationLayer' does not exist on AIOrchestrator. Using interpretation.parseIntent instead.
+      const result = await AIOrchestrator.interpretation.parseIntent(command);
       setCommand('');
       onCommand(result.intent, result.subject, result.topic);
     } catch (e) {
