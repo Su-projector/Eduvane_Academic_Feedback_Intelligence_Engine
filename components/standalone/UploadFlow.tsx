@@ -21,18 +21,22 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const mimeType = file.type || "image/jpeg";
     setState('PROCESSING');
     setProgressMsg('Securing work signal...');
     
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = (reader.result as string).split(',')[1];
+      const fullData = reader.result as string;
+      const base64 = fullData.split(',')[1];
+      
       try {
         setProgressMsg('Uploading to vault...');
         const publicUrl = await SupabaseService.storage.upload(userId, base64);
         
         setProgressMsg('Running Orchestration Pipeline...');
-        const analysis = await AIOrchestrator.evaluateWorkFlow(base64);
+        // Pass the explicit mimeType to the orchestrator
+        const analysis = await AIOrchestrator.evaluateWorkFlow(base64, mimeType);
         
         const submission: Submission = {
           ...analysis,
@@ -49,7 +53,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBa
       } catch (err) {
         console.error("Orchestration Error:", err);
         setState('IDLE');
-        alert("Evaluation failed. Please check image clarity and connectivity.");
+        alert("Evaluation failed. Please ensure your image is clear and you have an active internet connection.");
       }
     };
     reader.readAsDataURL(file);

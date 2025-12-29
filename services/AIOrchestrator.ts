@@ -4,7 +4,6 @@ import { Question, Submission, IntentResult } from "../types.ts";
 
 /**
  * ARCHITECTURAL PROVIDER INTERFACE
- * Decouples model identity from architectural role.
  */
 interface AIProvider {
   generate(params: GenerateContentParameters): Promise<{ text: string | undefined }>;
@@ -12,7 +11,7 @@ interface AIProvider {
 
 /**
  * GEMINI PROVIDER ADAPTER
- * Concrete implementation of the AIProvider using Google GenAI SDK.
+ * Adheres to strict browser initialization guidelines.
  */
 class GeminiProvider implements AIProvider {
   private modelName: string;
@@ -22,9 +21,12 @@ class GeminiProvider implements AIProvider {
   }
 
   async generate(params: GenerateContentParameters) {
-    // Guidelines: Always initialize with process.env.API_KEY.
-    // Assume the key is valid and present as per platform requirements.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.warn("ORCHESTRATOR_WARNING: API_KEY is undefined. Requests will fail.");
+    }
+    
+    const ai = new GoogleGenAI({ apiKey: apiKey as string });
     return await ai.models.generateContent({
       model: this.modelName,
       ...params
@@ -34,7 +36,7 @@ class GeminiProvider implements AIProvider {
 
 /**
  * ROLE: PERCEPTION SERVICE
- * Responsibility: Mechanical OCR / Verbatim text extraction.
+ * Mechanical OCR / Verbatim extraction with dynamic MIME support.
  */
 class PerceptionService {
   private provider: AIProvider;
@@ -43,14 +45,14 @@ class PerceptionService {
     this.provider = provider;
   }
 
-  async extractVerbatim(imageBuffer: string): Promise<string> {
+  async extractVerbatim(imageBuffer: string, mimeType: string = "image/jpeg"): Promise<string> {
     const response = await this.provider.generate({
-      contents: {
+      contents: [{
         parts: [
-          { inlineData: { data: imageBuffer, mimeType: "image/jpeg" } },
-          { text: "MECHANICAL TASK: VERBATIM OCR. Return every character exactly as seen. Do not fix grammar. Do not interpret. Do not format. Raw string output only." }
+          { inlineData: { data: imageBuffer, mimeType: mimeType } },
+          { text: "MECHANICAL TASK: VERBATIM OCR. Return every character exactly as seen. raw string output only." }
         ]
-      }
+      }]
     });
     return response.text || "";
   }
@@ -58,7 +60,6 @@ class PerceptionService {
 
 /**
  * ROLE: INTERPRETATION SERVICE
- * Responsibility: Structured Context & Intent Classification.
  */
 class InterpretationService {
   private provider: AIProvider;
@@ -68,35 +69,38 @@ class InterpretationService {
   }
 
   async parseIntent(input: string): Promise<IntentResult> {
-    const prompt = `
-      TASK: CLASSIFY INPUT SIGNAL.
-      INPUT: "${input}"
-      
-      OUTPUT FORMAT: STRICT JSON.
-      SCHEMA:
-      {
-        "intent": "ANALYZE" | "PRACTICE" | "HISTORY" | "CHAT" | "UNKNOWN",
-        "subject": string,
-        "topic": string,
-        "difficulty": "Easy" | "Medium" | "Hard",
-        "count": number
-      }
-    `;
+    const prompt = `CLASSIFY INPUT SIGNAL: "${input}"`;
 
     const response = await this.provider.generate({
-      contents: prompt,
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            intent: { type: Type.STRING },
-            subject: { type: Type.STRING },
-            topic: { type: Type.STRING },
-            difficulty: { type: Type.STRING },
-            count: { type: Type.NUMBER }
+            intent: { 
+              type: Type.STRING, 
+              description: "The inferred user action: PRACTICE, ANALYZE, HISTORY, or CHAT." 
+            },
+            subject: { 
+              type: Type.STRING, 
+              description: "The academic subject (e.g., Biology, Algebra)." 
+            },
+            topic: { 
+              type: Type.STRING, 
+              description: "The specific unit or concept." 
+            },
+            difficulty: { 
+              type: Type.STRING, 
+              description: "Easy, Medium, or Hard." 
+            },
+            count: { 
+              type: Type.NUMBER, 
+              description: "Quantity of items requested." 
+            }
           },
-          required: ["intent", "subject"]
+          required: ["intent", "subject"],
+          propertyOrdering: ["intent", "subject", "topic", "difficulty", "count"]
         }
       }
     });
@@ -104,13 +108,14 @@ class InterpretationService {
     try {
       const data = JSON.parse(response.text || "{}");
       return {
-        intent: data.intent as any || "UNKNOWN",
+        intent: (data.intent?.toUpperCase() as any) || "UNKNOWN",
         subject: data.subject || "General",
-        topic: data.topic || "Undetermined",
-        difficulty: data.difficulty as any || "Medium",
+        topic: data.topic || "General",
+        difficulty: (data.difficulty as any) || "Medium",
         count: data.count || 5
       };
     } catch (e) {
+      console.error("Parse Error:", e);
       return { intent: "UNKNOWN", subject: "General" };
     }
   }
@@ -118,7 +123,6 @@ class InterpretationService {
 
 /**
  * ROLE: PRIMARY REASONING SERVICE
- * Responsibility: THE SINGLE VOICE OF EDUVANE.
  */
 class PrimaryReasoningService {
   private provider: AIProvider;
@@ -129,31 +133,31 @@ class PrimaryReasoningService {
 
   async generateNarrativeEvaluation(rawText: string, context: IntentResult): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
     const prompt = `
-      VOICE: EDUVANE PRIMARY REASONING CORE.
-      TONE: Encouraging, Pedagogical, Precise.
+      VOICE: EDUVANE CORE.
       CONTEXT: Subject [${context.subject}], Topic [${context.topic}].
-      DATA: ${rawText}
-      
-      TASK:
-      1. Mastery Score (0-100).
-      2. Narrative feedback (The "Voice").
-      3. 3 Growth Steps.
+      WORK SIGNAL: ${rawText}
+      TASK: Evaluate mastery and provide pedagogical growth steps.
     `;
 
     const response = await this.provider.generate({
-      contents: prompt,
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
-        thinkingConfig: { thinkingBudget: 8000 },
+        thinkingConfig: { thinkingBudget: 16000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            score: { type: Type.NUMBER },
-            feedback: { type: Type.STRING },
-            improvementSteps: { type: Type.ARRAY, items: { type: Type.STRING } },
-            confidenceScore: { type: Type.NUMBER }
+            score: { type: Type.INTEGER, description: "Mastery percentage 0-100." },
+            feedback: { type: Type.STRING, description: "Detailed pedagogical feedback." },
+            improvementSteps: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "List of 3 concrete next steps."
+            },
+            confidenceScore: { type: Type.NUMBER, description: "AI confidence in diagnosis." }
           },
-          required: ["score", "feedback", "improvementSteps"]
+          required: ["score", "feedback", "improvementSteps"],
+          propertyOrdering: ["score", "feedback", "improvementSteps", "confidenceScore"]
         }
       }
     });
@@ -161,27 +165,21 @@ class PrimaryReasoningService {
     const result = JSON.parse(response.text || "{}");
     return {
       subject: context.subject,
-      topic: context.topic,
-      score: result.score,
-      feedback: result.feedback,
-      improvementSteps: result.improvementSteps,
-      confidenceScore: result.confidenceScore || 0.95
+      topic: context.topic || context.subject,
+      score: result.score || 0,
+      feedback: result.feedback || "Unable to generate feedback for this signal.",
+      improvementSteps: result.improvementSteps || ["Review core concepts", "Try a simpler problem", "Consult reference materials"],
+      confidenceScore: result.confidenceScore || 0.8
     };
   }
 
   async generatePracticeItems(context: IntentResult): Promise<Question[]> {
-    const prompt = `
-      VOICE: EDUVANE PRIMARY REASONING CORE.
-      TASK: Synthesize ${context.count} ${context.difficulty} practice items.
-      SUBJECT: ${context.subject}. TOPIC: ${context.topic}.
-      
-      CONSTRAINTS: Plain text, rigorous, ordered.
-    `;
+    const prompt = `Synthesize ${context.count} ${context.difficulty} practice items for ${context.subject}: ${context.topic}.`;
 
     const response = await this.provider.generate({
-      contents: prompt,
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
-        thinkingConfig: { thinkingBudget: 4000 },
+        thinkingConfig: { thinkingBudget: 16000 },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -202,25 +200,20 @@ class PrimaryReasoningService {
   }
 }
 
-// Initialize providers
+// Initialize providers with optimized role mapping
 const flashProvider = new GeminiProvider("gemini-3-flash-preview");
 const proProvider = new GeminiProvider("gemini-3-pro-preview");
 
-// Instantiate services
 const perception = new PerceptionService(flashProvider);
 const interpretation = new InterpretationService(flashProvider);
 const reasoning = new PrimaryReasoningService(proProvider);
 
 export const AIOrchestrator = {
   interpretation,
+  async validateConfiguration(): Promise<boolean> { return true; },
 
-  // No-op validation as per guidelines (assume key is present)
-  async validateConfiguration(): Promise<boolean> {
-    return true;
-  },
-
-  async evaluateWorkFlow(imageBuffer: string): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
-    const rawText = await perception.extractVerbatim(imageBuffer);
+  async evaluateWorkFlow(imageBuffer: string, mimeType: string): Promise<Omit<Submission, "id" | "timestamp" | "imageUrl">> {
+    const rawText = await perception.extractVerbatim(imageBuffer, mimeType);
     const context = await interpretation.parseIntent(rawText);
     return await reasoning.generateNarrativeEvaluation(rawText, context);
   },
