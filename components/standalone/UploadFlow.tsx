@@ -1,27 +1,21 @@
 
-import React, { useState, useEffect } from 'react';
-import { BackendService } from '../../services/BackendService.ts';
+import React, { useState } from 'react';
+import { AIOrchestrator } from '../../services/AIOrchestrator.ts';
 import { SupabaseService } from '../../services/SupabaseService.ts';
 import { Submission } from '../../types.ts';
-import { Upload, Loader2, CheckCircle, ArrowLeft, Lightbulb, BookOpen, Camera, Info } from 'lucide-react';
+import { Loader2, CheckCircle, ArrowLeft, Lightbulb, Camera, Info } from 'lucide-react';
 import { VaneIcon } from '../../constants.tsx';
 
 interface UploadFlowProps {
   userId: string;
-  initialSubject?: string;
   onComplete: (sub: Submission) => void;
   onBack: () => void;
 }
 
-export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject = '', onComplete, onBack }) => {
+export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, onComplete, onBack }) => {
   const [state, setState] = useState<'IDLE' | 'PROCESSING' | 'RESULT'>('IDLE');
-  const [subject, setSubject] = useState(initialSubject);
   const [result, setResult] = useState<Submission | null>(null);
   const [progressMsg, setProgressMsg] = useState('');
-
-  useEffect(() => {
-    if (initialSubject) setSubject(initialSubject);
-  }, [initialSubject]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,9 +31,9 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
         setProgressMsg('Uploading to vault...');
         const publicUrl = await SupabaseService.storage.upload(userId, base64);
         
-        setProgressMsg('Contacting Intelligence Core (Pro Module)...');
-        // BackendService triggers gemini-3-pro-preview
-        const analysis = await BackendService.analyzeWork(base64, subject ? { subject } : undefined);
+        setProgressMsg('Triggering AI Orchestrator Pipeline...');
+        // TRIGGER SEQUENTIAL ORCHESTRATION: Perception -> Interpretation -> Primary Reasoning
+        const analysis = await AIOrchestrator.evaluateWorkFlow(base64);
         
         const submission: Submission = {
           ...analysis,
@@ -48,16 +42,15 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
           imageUrl: publicUrl
         };
         
-        setProgressMsg('Indexing findings...');
         await SupabaseService.submissions.save(userId, submission);
         
         setResult(submission);
         onComplete(submission);
         setState('RESULT');
       } catch (err) {
-        console.error("Upload Pipeline Error:", err);
+        console.error("Orchestration Pipeline Failure:", err);
         setState('IDLE');
-        alert("Evaluation failed. Please check your image clarity and try again.");
+        alert("Intelligence Core encountered an error. Check image clarity.");
       }
     };
     reader.readAsDataURL(file);
@@ -73,7 +66,7 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
           </div>
         </div>
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-[#1E3A5F]">Deep Diagnostic In Progress</h3>
+          <h3 className="text-2xl font-bold text-[#1E3A5F]">Orchestration in Progress</h3>
           <p className="text-slate-500 animate-pulse mt-2 font-mono text-xs uppercase tracking-widest">{progressMsg}</p>
         </div>
       </div>
@@ -89,45 +82,38 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
           </button>
           <div className="text-right">
             <span className="bg-[#1FA2A6]/10 text-[#1FA2A6] px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-              {result.subject} {result.topic ? `• ${result.topic}` : ''}
+              {result.subject} • {result.topic}
             </span>
           </div>
         </div>
 
         <div className="bg-white rounded-3xl p-8 md:p-12 shadow-2xl border-b-8 border-[#1FA2A6]">
           <div className="flex flex-col md:flex-row gap-12 items-center">
-            <div className="relative">
-              <svg className="w-32 h-32 transform -rotate-90">
-                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
-                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={364.4} strokeDashoffset={364.4 * (1 - result.score / 100)} className="text-[#1FA2A6] transition-all duration-1000" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-[#1E3A5F]">{result.score}%</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Mastery</span>
-              </div>
+            <div className="text-center">
+              <div className="text-7xl font-black text-[#1FA2A6] leading-none">{result.score}</div>
+              <div className="text-[10px] font-black text-[#1E3A5F] uppercase tracking-[0.3em] mt-2">Mastery Index</div>
             </div>
             
             <div className="flex-grow space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-[#1FA2A6] tracking-widest">Growth Intelligence Result</span>
+                <span className="text-[10px] font-black uppercase text-[#1FA2A6] tracking-widest">Voice of Eduvane</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#1E3A5F]">{result.topic || 'Assessment'}</h2>
-              <p className="text-base md:text-lg text-slate-800 leading-relaxed font-medium insight-narrative">
-                "{result.feedback}"
+              <p className="text-lg text-slate-800 leading-relaxed font-medium insight-narrative">
+                {result.feedback}
               </p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
-          <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
             <div className="flex items-center gap-2 mb-6 text-[#1FA2A6]">
               <Lightbulb size={20} />
-              <h4 className="font-bold text-[#1E3A5F] uppercase text-xs tracking-widest">Next Growth Steps</h4>
+              <h4 className="font-bold text-[#1E3A5F] uppercase text-xs tracking-widest">Next Growth Actions</h4>
             </div>
             <ul className="space-y-4">
               {result.improvementSteps.map((step, i) => (
-                <li key={i} className="flex gap-4 text-sm text-slate-700 leading-relaxed">
+                <li key={i} className="flex gap-4 text-sm text-slate-700">
                   <span className="font-black text-[#1FA2A6] bg-[#1FA2A6]/5 w-6 h-6 flex items-center justify-center rounded-lg flex-shrink-0">{i + 1}</span>
                   {step}
                 </li>
@@ -135,15 +121,12 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
             </ul>
           </div>
           
-          <div className="bg-[#1E3A5F] p-8 md:p-10 rounded-2xl text-white flex flex-col justify-center items-center text-center shadow-xl">
-            {result.imageUrl && (
-              <img src={result.imageUrl} alt="Artifact" className="w-full h-32 object-cover rounded-xl mb-6 opacity-30 grayscale blur-[1px]" />
-            )}
+          <div className="bg-[#1E3A5F] p-10 rounded-2xl text-white flex flex-col justify-center items-center text-center shadow-xl">
             <CheckCircle size={40} className="text-[#1FA2A6] mb-4" />
-            <h4 className="text-xl font-bold mb-2">Diagnostic Complete</h4>
-            <p className="text-slate-400 text-xs mb-8">Intelligence has been successfully associated with your academic profile.</p>
+            <h4 className="text-xl font-bold mb-2">Diagnostic Indexed</h4>
+            <p className="text-slate-400 text-xs mb-8">This analysis signal is now part of your academic growth timeline.</p>
             <button onClick={() => setState('IDLE')} className="w-full py-4 bg-[#1FA2A6] rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-[#198d91] transition-all">
-              Evaluate New Sample
+              Evaluate Another Work
             </button>
           </div>
         </div>
@@ -154,42 +137,26 @@ export const UploadFlow: React.FC<UploadFlowProps> = ({ userId, initialSubject =
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500 py-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[#1E3A5F]">Evaluate Work</h2>
-        <p className="text-slate-500 mt-2">Submit any artifact for agnostic diagnostic analysis.</p>
+        <h2 className="text-4xl font-black text-[#1E3A5F] tracking-tight">Immediate Evaluation</h2>
+        <p className="text-slate-500 mt-2 font-medium">No context required. Upload work for agnostic diagnostic analysis.</p>
       </div>
 
-      <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200 space-y-8">
-        <label className="flex flex-col items-center justify-center w-full h-80 md:h-96 border-2 border-dashed border-slate-200 rounded-3xl cursor-pointer hover:bg-slate-50 hover:border-[#1FA2A6] transition-all group relative overflow-hidden">
-          <div className="flex flex-col items-center justify-center p-6 md:p-10">
-            <div className="bg-[#1FA2A6]/10 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] mb-6 text-[#1FA2A6] group-hover:scale-105 transition-transform">
-              <Camera size={56} strokeWidth={1.5} />
+      <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-slate-200">
+        <label className="flex flex-col items-center justify-center w-full h-96 border-4 border-dashed border-slate-100 rounded-[2.5rem] cursor-pointer hover:bg-slate-50 hover:border-[#1FA2A6]/30 transition-all group">
+          <div className="flex flex-col items-center justify-center p-10">
+            <div className="bg-[#1FA2A6]/5 p-10 rounded-[3rem] mb-6 text-[#1FA2A6] group-hover:scale-105 transition-transform">
+              <Camera size={64} strokeWidth={1.5} />
             </div>
-            <p className="mb-2 text-lg md:text-xl text-[#1E3A5F] font-black uppercase tracking-tight text-center">
-              Upload Work for Diagnosis
+            <p className="mb-2 text-2xl text-[#1E3A5F] font-black uppercase tracking-tight text-center">
+              Snap or Upload Signal
             </p>
-            <p className="text-xs md:text-sm text-slate-500 text-center font-medium leading-snug">
-              Essays, Math solutions, Diagrams, or Notes.<br className="hidden md:block" />
-              Intelligence inferred automatically.
+            <p className="text-sm text-slate-400 text-center font-medium leading-relaxed max-w-xs">
+              Handwritten notes, essays, or problems.<br />
+              Intelligence inferred immediately.
             </p>
           </div>
-          <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleFileUpload} />
+          <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
         </label>
-
-        <div className="pt-6 border-t border-slate-100 flex flex-col gap-4">
-           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">
-             <Info size={12} /> Target a Specific Context
-           </div>
-           <div className="relative">
-            <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input 
-              type="text" 
-              placeholder="e.g. Organic Chemistry, US History..." 
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full p-4 md:p-5 pl-12 bg-slate-50 border border-slate-100 rounded-2xl text-sm text-[#1E3A5F] focus:outline-none focus:ring-2 focus:ring-[#1FA2A6]/20 transition-all font-black placeholder:text-slate-300"
-            />
-          </div>
-        </div>
       </div>
     </div>
   );

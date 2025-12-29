@@ -1,21 +1,5 @@
 
-export type UserMode = 'LEARNER' | 'TEACHER';
-export type ValidationStatus = 'VALIDATED' | 'PENDING_REVIEW' | 'DRAFT_GENERATED' | 'RELEASED';
 export type EduvaneMode = 'STANDALONE' | 'INSTITUTIONAL';
-export type IntelligenceAudience = 'EDUCATOR' | 'FAMILY' | 'LEARNER';
-
-export interface TranslatedIntelligence {
-  audience: IntelligenceAudience;
-  headline: string;
-  narrative: string;
-  actionableStep: string;
-}
-
-export interface PresentationContent {
-  headline: string;
-  narrative: string;
-  actionableStep: string;
-}
 
 export interface UserProfile {
   id: string;
@@ -24,8 +8,8 @@ export interface UserProfile {
 }
 
 export interface IntentResult {
-  intent: 'PRACTICE' | 'ANALYZE' | 'HISTORY' | 'TUTORIAL' | 'UNKNOWN';
-  subject?: string;
+  intent: 'PRACTICE' | 'ANALYZE' | 'HISTORY' | 'CHAT' | 'UNKNOWN';
+  subject: string;
   topic?: string;
   count?: number;
   difficulty?: 'Easy' | 'Medium' | 'Hard';
@@ -61,6 +45,9 @@ export interface PracticeSet {
   timestamp: string;
 }
 
+// Added missing validation and intelligence types for domain logic
+export type ValidationStatus = 'RELEASED' | 'PENDING_REVIEW' | 'FLAGGED';
+
 export interface IntelligenceInsight {
   id: string;
   studentId: string;
@@ -70,8 +57,23 @@ export interface IntelligenceInsight {
   category: 'CONCEPTUAL' | 'PROCEDURAL' | 'CARELESS';
   handwritingClarity: number;
   rawObservation: string;
-  observationalStatement: string; 
-  status: ValidationStatus;
+  observationalStatement: string;
+  status: 'VALIDATED' | 'PENDING_REVIEW';
   mode: EduvaneMode;
   impactLevel: 'HIGH' | 'AMBER' | 'LOW';
+}
+
+export interface TranslatedIntelligence {
+  audience: IntelligenceAudience;
+  headline: string;
+  narrative: string;
+  actionableStep: string;
+}
+
+export type IntelligenceAudience = 'EDUCATOR' | 'FAMILY' | 'LEARNER';
+
+export interface PresentationContent {
+  headline: string;
+  narrative: string;
+  actionableStep: string;
 }

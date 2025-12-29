@@ -8,7 +8,7 @@ import { HistoryView } from './components/standalone/HistoryView.tsx';
 import { VaneIcon } from './constants.tsx';
 import { Submission, PracticeSet, UserProfile } from './types.ts';
 import { SupabaseService, supabase } from './services/SupabaseService.ts';
-import { LogOut, User as UserIcon, Loader2, Info, LayoutDashboard, Camera, Sparkles, History } from 'lucide-react';
+import { LogOut, Loader2, Info, LayoutDashboard, Camera, Sparkles, History } from 'lucide-react';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -111,6 +111,7 @@ const App: React.FC = () => {
     if (intent === 'PRACTICE') setView('PRACTICE');
     else if (intent === 'ANALYZE') setView('UPLOAD');
     else if (intent === 'HISTORY') setView('HISTORY');
+    else setView('DASHBOARD');
   };
 
   if (!session && !isGuest) {
@@ -136,7 +137,6 @@ const App: React.FC = () => {
         </div>
       )}
       
-      {/* Top Header: Identity & Profile */}
       <header className="bg-[#1E3A5F] text-white p-4 md:p-6 shadow-lg sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2 md:gap-3 cursor-pointer group" onClick={() => { setView('DASHBOARD'); setRouteParams({}); }}>
@@ -144,7 +144,6 @@ const App: React.FC = () => {
             <h1 className="text-lg md:text-xl font-black tracking-tighter uppercase">EDUVANE</h1>
           </div>
           
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
             <button onClick={() => setView('UPLOAD')} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Evaluate</button>
             <button onClick={() => setView('PRACTICE')} className={`text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-300 hover:text-white'}`}>Practice</button>
@@ -152,20 +151,16 @@ const App: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="flex flex-col items-end">
-              <span className="text-[9px] md:text-[10px] font-black bg-[#1FA2A6] px-2 md:px-3 py-0.5 md:py-1 rounded-full text-white shadow-sm">
-                {profile?.xp_total || 0} XP
-              </span>
-            </div>
-            <div className="h-6 w-px bg-slate-700 hidden md:block"></div>
-            <button onClick={handleSignOut} className="text-slate-400 hover:text-red-400 transition-colors p-1" aria-label="Sign Out">
+            <span className="text-[9px] md:text-[10px] font-black bg-[#1FA2A6] px-3 py-1 rounded-full text-white shadow-sm">
+              {profile?.xp_total || 0} XP
+            </span>
+            <button onClick={handleSignOut} className="text-slate-400 hover:text-red-400 transition-colors p-1">
               <LogOut size={18} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-grow container mx-auto py-6 md:py-10 px-4 mb-20 md:mb-0">
         {view === 'DASHBOARD' && (
           <Dashboard 
@@ -178,7 +173,6 @@ const App: React.FC = () => {
         {view === 'UPLOAD' && (
           <UploadFlow 
             userId={currentUserId}
-            initialSubject={routeParams.subject}
             onComplete={saveSubmission} 
             onBack={() => setView('DASHBOARD')} 
           />
@@ -186,7 +180,6 @@ const App: React.FC = () => {
         {view === 'PRACTICE' && (
           <PracticeFlow 
             initialSubject={routeParams.subject}
-            initialTopic={routeParams.topic}
             onSave={savePracticeSet} 
             onBack={() => setView('DASHBOARD')} 
           />
@@ -200,41 +193,24 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center z-50 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
-        <button 
-          onClick={() => setView('DASHBOARD')} 
-          className={`flex flex-col items-center gap-1 ${view === 'DASHBOARD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
-        >
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-between items-center z-50 shadow-2xl">
+        <button onClick={() => setView('DASHBOARD')} className={`flex flex-col items-center gap-1 ${view === 'DASHBOARD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}>
           <LayoutDashboard size={20} />
           <span className="text-[8px] font-black uppercase tracking-widest">Hub</span>
         </button>
-        <button 
-          onClick={() => setView('UPLOAD')} 
-          className={`flex flex-col items-center gap-1 ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
-        >
+        <button onClick={() => setView('UPLOAD')} className={`flex flex-col items-center gap-1 ${view === 'UPLOAD' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}>
           <Camera size={20} />
           <span className="text-[8px] font-black uppercase tracking-widest">Evaluate</span>
         </button>
-        <button 
-          onClick={() => setView('PRACTICE')} 
-          className={`flex flex-col items-center gap-1 ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
-        >
+        <button onClick={() => setView('PRACTICE')} className={`flex flex-col items-center gap-1 ${view === 'PRACTICE' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}>
           <Sparkles size={20} />
           <span className="text-[8px] font-black uppercase tracking-widest">Practice</span>
         </button>
-        <button 
-          onClick={() => setView('HISTORY')} 
-          className={`flex flex-col items-center gap-1 ${view === 'HISTORY' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}
-        >
+        <button onClick={() => setView('HISTORY')} className={`flex flex-col items-center gap-1 ${view === 'HISTORY' ? 'text-[#1FA2A6]' : 'text-slate-400'}`}>
           <History size={20} />
           <span className="text-[8px] font-black uppercase tracking-widest">Timeline</span>
         </button>
       </nav>
-
-      <footer className="hidden md:block p-8 text-center text-[10px] text-slate-400 font-mono tracking-[0.4em] uppercase border-t border-slate-100 bg-white">
-        Intelligence Engine MVP | Standalone Framework v1
-      </footer>
     </div>
   );
 };
