@@ -24,7 +24,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      // Validate AI Orchestrator configuration
+      // Validate AI Orchestrator configuration on mount
       const ready = await AIOrchestrator.validateConfiguration();
       setOrchestratorReady(ready);
 
@@ -125,8 +125,8 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-[#1E3A5F] p-8 text-white text-center">
         <div className="max-w-md space-y-6">
           <AlertTriangle size={64} className="mx-auto text-amber-500" />
-          <h1 className="text-3xl font-black">Intelligence Engine Offline</h1>
-          <p className="opacity-70">The system intelligence API key is missing. Please ensure your environment is correctly configured for the Gemini API.</p>
+          <h1 className="text-3xl font-black uppercase tracking-tighter">System Offline</h1>
+          <p className="opacity-70 font-medium">The required API_KEY environment variable is missing or malformed. Contact the Lead AI Architect.</p>
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
       {(!SupabaseService.isConfigured() || isGuest) && (
         <div className="bg-[#F2A900] text-[#1E3A5F] px-4 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 z-[60]">
-          <Info size={14} /> Guest Mode: Local Persistence Active
+          <Info size={14} /> Guest Mode Active: Persistence is local only.
         </div>
       )}
       
