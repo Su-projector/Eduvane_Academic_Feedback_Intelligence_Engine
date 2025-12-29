@@ -15,23 +15,29 @@ export const PracticeFlow: React.FC<PracticeFlowProps> = ({ initialSubject = '',
   const [prompt, setPrompt] = useState(initialSubject ? `Generate 5 items for ${initialSubject}` : '');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [metadata, setMetadata] = useState<{ subject: string; topic: string }>({ subject: '', topic: '' });
+  const [error, setError] = useState<string | null>(null);
 
   const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
 
     setState('GENERATING');
+    setError(null);
     try {
       const generated = await AIOrchestrator.generatePracticeFlow(prompt);
-      // We assume the Reasoning layer provides the metadata context now
       const interpretation = await AIOrchestrator.interpretation.parseIntent(prompt);
+      
+      if (!Array.isArray(generated) || generated.length === 0) {
+        throw new Error("EMPTY_GENERATION");
+      }
+
       setMetadata({ subject: interpretation.subject, topic: interpretation.topic || interpretation.subject });
       setQuestions(generated);
       setState('REVIEW');
     } catch (err) {
-      console.error(err);
+      console.error("Practice Generation Error:", err);
       setState('SETUP');
-      alert("Orchestrator failed to synthesize items. Try a more specific prompt.");
+      setError("The Intelligence Core failed to synthesize items. Please refine your prompt.");
     }
   };
 
@@ -72,7 +78,6 @@ export const PracticeFlow: React.FC<PracticeFlowProps> = ({ initialSubject = '',
           {questions.map((q, idx) => (
             <div key={idx} className="p-10 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 font-medium text-xl text-[#1E3A5F] leading-relaxed">
               <span className="text-[10px] font-black text-slate-300 uppercase block mb-6 tracking-[0.4em]">Item {idx + 1}</span>
-              {/* Plain text output - No editable controls as per spec */}
               <p>{q.text}</p>
             </div>
           ))}
@@ -93,6 +98,11 @@ export const PracticeFlow: React.FC<PracticeFlowProps> = ({ initialSubject = '',
       <div className="text-center space-y-3">
         <h2 className="text-5xl font-black text-[#1E3A5F] tracking-tighter">Command Generation</h2>
         <p className="text-slate-400 font-medium text-xl italic">Agnostic synthesis. Any subject, any level.</p>
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold uppercase tracking-tight border border-red-100 animate-bounce">
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="bg-[#1E3A5F] p-12 rounded-[3.5rem] shadow-2xl text-white">
