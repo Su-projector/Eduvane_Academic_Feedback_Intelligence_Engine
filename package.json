@@ -17,9 +17,7 @@
   },
   "overrides": {
     "react": "18.2.0",
-    "react-dom": "18.2.0"
-  },
-  "scripts": {
-    "preinstall": "npm cache clean --force"
+    "react-dom": "18.2.0",
+    "typescript": "5.2.2"
   }
 }
